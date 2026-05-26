@@ -1,81 +1,28 @@
-'use client'
-import Link from 'next/link'
-import { Activity, CATEGORIES } from '@/lib/supabase'
-import { format } from 'date-fns'
-import { de } from 'date-fns/locale'
-
-export default function ActivityCard({ activity, joined }: { activity: Activity, joined?: boolean }) {
-  const cat = CATEGORIES.find(c => c.id === activity.category)
-  const date = new Date(activity.datetime)
-  const isFull = (activity.participant_count || 0) >= activity.max_people
-  const isPast = date < new Date()
-
-  return (
-    <Link href={`/activity/${activity.id}`} className="card-link">
-      <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        {/* top bar */}
-        <div style={{
-          padding: '18px 18px 14px',
-          background: isPast ? 'var(--bg-hover)' : 'linear-gradient(135deg, rgba(255,107,53,0.18) 0%, rgba(255,107,53,0.05) 100%)',
-          borderBottom: '1px solid var(--border)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          <span style={{ fontSize: '28px' }}>{cat?.emoji || '✨'}</span>
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-            {joined && <span className="badge badge-grass">✓ dabei</span>}
-            {isFull && !joined && <span className="badge badge-muted">voll</span>}
-            {isPast && <span className="badge badge-muted">vorbei</span>}
-          </div>
-        </div>
-
-        {/* content */}
-        <div style={{ padding: '16px 18px 18px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <span className="badge badge-sun" style={{ marginBottom: '10px', alignSelf: 'flex-start' }}>
-            {cat?.label || 'sonstiges'}
-          </span>
-          <h3 style={{ fontSize: '17px', fontWeight: 700, marginBottom: '10px', lineHeight: 1.25, letterSpacing: '-0.3px' }}>
-            {activity.title}
-          </h3>
-          {activity.description && (
-            <p style={{
-              fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.55,
-              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
-            }}>
-              {activity.description}
-            </p>
-          )}
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', marginTop: 'auto' }}>
-            {[
-              { icon: '📅', text: format(date, "EEE, d. MMM 'um' HH:mm", { locale: de }) },
-              { icon: '📍', text: activity.location },
-              { icon: '👥', text: `${activity.participant_count || 0} / ${activity.max_people}` },
-            ].map((item, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: 'var(--text-sub)' }}>
-                <span>{item.icon}</span>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.text}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* creator */}
-          <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{
-              width: '24px', height: '24px', borderRadius: '50%',
-              background: 'var(--sun)', color: 'white',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '10px', fontWeight: 700, flexShrink: 0,
-            }}>
-              {activity.creator_name?.[0]?.toUpperCase() || '?'}
-            </div>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              von <span style={{ color: 'var(--text-sub)', fontWeight: 500 }}>{activity.creator_name}</span>
-            </span>
-          </div>
-        </div>
-      </div>
-    </Link>
-  )
+{
+  "name": "summr",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.8",
+    "@supabase/ssr": "^0.6.1",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.513.0",
+    "next": "15.3.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.3.3",
+    "typescript": "^5"
+  }
 }
