@@ -1,0 +1,70 @@
+'use client'
+import { useEffect, useState } from 'react'
+import { createClient } from '@supabase/supabase-js'
+import { User } from '@supabase/supabase-js'
+import { useRouter } from 'next/navigation'
+import Navbar from '@/components/Navbar'
+import ActivityCard from '@/components/ActivityCard'
+import Link from 'next/link'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+export default function MyActivities() {
+  const router = useRouter()
+  const [user, setUser] = useState<User | null>(null)
+  const [joined, setJoined] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) { router.push('/'); return }
+      setUser(session.user)
+
+      const { data: parts } = await supabase
+        .from('participants')
+        .select('activity_id, activities(*)')
+        .eq('user_id', session.user.id)
+
+      if (parts) {
+        const acts = parts
+          .map((p: any) => p.activities)
+          .filter(Boolean)
+          .filter((a: any) => a.creator_id !== session.user.id)
+        setJoined(acts)
+      }
+      setLoading(false)
+    })
+  }, [])
+
+  return (
+    <>
+      <Navbar user={user} />
+      <div className="page-wrap">
+        <div style={{ marginBottom: '28px' }}>
+          <h1 style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-1px', marginBottom: '4px' }}>meine events</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>events bei denen du dabei bist</p>
+        </div>
+
+        {loading ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+            {[1,2,3].map(i => <div key={i} className="loading-shimmer" style={{ height: '280px' }} />)}
+          </div>
+        ) : joined.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '80px 24px' }}>
+            <div style={{ fontSize: '40px', marginBottom: '14px' }}>🌞</div>
+            <h3 style={{ fontWeight: 700, marginBottom: '8px' }}>noch bei keinem event</h3>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '14px' }}>schau dich auf dem dashboard um!</p>
+            <Link href="/dashboard" className="btn-primary">events entdecken</Link>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+            {joined.map((a: any) => <ActivityCard key={a.id} activity={a} joined />)}
+          </div>
+        )}
+      </div>
+    </>
+  )
+}

@@ -1,0 +1,138 @@
+'use client'
+import { useEffect, useState } from 'react'
+import { createClient } from '@supabase/supabase-js'
+import { CATEGORIES } from '@/lib/supabase'
+import { User } from '@supabase/supabase-js'
+import { useRouter } from 'next/navigation'
+import Navbar from '@/components/Navbar'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+export default function CreateActivity() {
+  const router = useRouter()
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
+  const [form, setForm] = useState({
+    title: '', description: '', location: '',
+    datetime: '', max_people: 6, category: 'sonstiges',
+  })
+
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) { router.push('/'); return }
+      setUser(session.user)
+      const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single()
+      setProfile(data)
+    })
+  }, [])
+
+  function set(key: string, val: any) {
+    setForm(f => ({ ...f, [key]: val }))
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!user) return
+    setLoading(true)
+    const displayName = profile?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'jemand'
+
+    const { data: activity, error } = await supabase.from('activities').insert({
+      ...form,
+      creator_id: user.id,
+      creator_name: displayName,
+      creator_avatar: profile?.avatar_url || user.user_metadata?.avatar_url,
+    }).select().single()
+
+    if (!error && activity) {
+      await supabase.from('participants').insert({
+        activity_id: activity.id, user_id: user.id, user_name: displayName,
+      })
+      router.push(`/activity/${activity.id}`)
+    } else {
+      console.error(error)
+      setLoading(false)
+    }
+  }
+
+  const Label = ({ children }: { children: React.ReactNode }) => (
+    <label style={{ fontWeight: 600, fontSize: '13px', display: 'block', marginBottom: '8px', color: 'var(--text-sub)', letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+      {children}
+    </label>
+  )
+
+  return (
+    <>
+      <Navbar user={user} />
+      <div className="page-wrap" style={{ maxWidth: '580px' }}>
+        <div style={{ marginBottom: '32px' }}>
+          <h1 style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-1px', marginBottom: '6px' }}>
+            event erstellen 🎉
+          </h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>was planst du diesen sommer?</p>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {/* kategorie */}
+          <div>
+            <Label>kategorie</Label>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {CATEGORIES.map(c => (
+                <button type="button" key={c.id} onClick={() => set('category', c.id)} style={{
+                  padding: '7px 14px', borderRadius: '99px', fontSize: '12px', fontWeight: 600,
+                  fontFamily: 'Syne, sans-serif', cursor: 'pointer', border: '1px solid', transition: 'all 0.15s',
+                  background: form.category === c.id ? 'var(--sun)' : 'var(--bg-card)',
+                  borderColor: form.category === c.id ? 'var(--sun)' : 'var(--border)',
+                  color: form.category === c.id ? 'white' : 'var(--text-muted)',
+                }}>
+                  {c.emoji} {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <Label>titel *</Label>
+            <input className="input" placeholder="z.b. beach volleyball am see" value={form.title}
+              onChange={e => set('title', e.target.value)} required maxLength={80} />
+          </div>
+
+          <div>
+            <Label>beschreibung</Label>
+            <textarea className="input" placeholder="was ist geplant? was braucht man mitbringen?" value={form.description}
+              onChange={e => set('description', e.target.value)} rows={3} style={{ resize: 'vertical' }} />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div>
+              <Label>wann? *</Label>
+              <input className="input" type="datetime-local" value={form.datetime}
+                onChange={e => set('datetime', e.target.value)} required min={new Date().toISOString().slice(0, 16)} />
+            </div>
+            <div>
+              <Label>wo? *</Label>
+              <input className="input" placeholder="ort oder adresse" value={form.location}
+                onChange={e => set('location', e.target.value)} required />
+            </div>
+          </div>
+
+          <div>
+            <Label>max. teilnehmer: <span style={{ color: 'var(--sun)', textTransform: 'none' }}>{form.max_people} personen</span></Label>
+            <input type="range" min={2} max={50} value={form.max_people}
+              onChange={e => set('max_people', parseInt(e.target.value))} style={{ width: '100%' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              <span>2</span><span>50</span>
+            </div>
+          </div>
+
+          <button type="submit" className="btn-primary" disabled={loading} style={{ justifyContent: 'center', padding: '14px', fontSize: '15px' }}>
+            {loading ? 'wird erstellt...' : '🌞 event erstellen'}
+          </button>
+        </form>
+      </div>
+    </>
+  )
+}
